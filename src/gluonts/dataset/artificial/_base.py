@@ -848,3 +848,26 @@ def constant_dataset() -> Tuple[DatasetInfo, Dataset, Dataset]:
     )
 
     return info, train_ds, test_ds
+
+
+def shuffle_testing_dataset(n):
+    target = [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+              0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.,
+              0., 0., 0., 0., 0., 0., 0., 0., 0., 3., 0., 1., 2., 0., 0., 4., 5., 5.,
+              1., 0., 0., 2., 0., 16., 0., 34., 10., 10., 16., 0., 10., 50., 4., 63., 36., 8.,
+              18., 50., 18., 56., 21., 40., 37., 34., 52., 58., 49., 70.]
+    # the static cat feature here is used for testing shuffle
+    targets = [target[:] + [i] for i in range(n)]
+
+    start = pd.Timestamp("2020-01-23", freq='1D')
+    number = [[i] for i in range(n)]
+    train_ds = ListDataset([
+        {
+            FieldName.TARGET: a,
+            FieldName.START: start,
+            FieldName.FEAT_STATIC_CAT: b
+        }
+        for a, b in zip(targets, number)
+
+    ], freq="D")
+    return train_ds

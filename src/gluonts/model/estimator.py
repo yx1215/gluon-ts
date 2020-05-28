@@ -188,6 +188,8 @@ class GluonEstimator(Estimator):
         validation_data: Optional[Dataset] = None,
         num_workers: Optional[int] = None,
         num_prefetch: Optional[int] = None,
+        shuffle: Optional[bool] = False,
+        shuffle_buffer_length: Optional[int] = None,
         **kwargs,
     ) -> TrainOutput:
         transformation = self.create_transformation()
@@ -203,6 +205,8 @@ class GluonEstimator(Estimator):
             dtype=self.dtype,
             num_workers=num_workers,
             num_prefetch=num_prefetch,
+            shuffle=shuffle,
+            shuffle_buffer_length=shuffle_buffer_length,
             **kwargs,
         )
 
@@ -216,6 +220,8 @@ class GluonEstimator(Estimator):
                 dtype=self.dtype,
                 num_workers=num_workers,
                 num_prefetch=num_prefetch,
+                shuffle=shuffle,
+                shuffle_buffer_length=shuffle_buffer_length,
                 **kwargs,
             )
 
@@ -246,8 +252,10 @@ class GluonEstimator(Estimator):
         validation_data: Optional[Dataset] = None,
         num_workers: Optional[int] = None,
         num_prefetch: Optional[int] = None,
+        shuffle: Optional[bool] = False,
+        shuffle_buffer_length: Optional[int] = None,
         **kwargs,
     ) -> Predictor:
         return self.train_model(
-            training_data, validation_data, num_workers, num_prefetch, **kwargs
+            training_data, validation_data, num_workers, num_prefetch, shuffle, shuffle_buffer_length, **kwargs
         ).predictor

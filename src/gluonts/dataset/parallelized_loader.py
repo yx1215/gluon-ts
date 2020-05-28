@@ -529,6 +529,8 @@ class ParallelDataLoader(object):
         batchify_fn: Callable = batchify,
         num_prefetch: Optional[int] = None,
         num_workers: Optional[int] = None,
+        shuffle_buffer_length: Optional[int] = None,
+        shuffle: Optional[bool] = False
     ):
         # Some windows error with the ForkingPickler prevents usage currently:
         if sys.platform == "win32":
@@ -556,6 +558,9 @@ class ParallelDataLoader(object):
         assert (
             num_prefetch is None or num_prefetch >= 0
         ), "Num workers has to be >= 0."
+        assert (
+            shuffle_buffer_length is None or shuffle_buffer_length >= batch_size
+        ), "Shuffle buffer length has to be at least the size of each batch."
 
         self.dataset = dataset
         self.dataset_len: int
@@ -599,6 +604,13 @@ class ParallelDataLoader(object):
         self.worker_id_queue: Optional[Queue] = None
         # In order to recycle unused but pre-calculated batches from last epoch for training:
         self.multi_worker_cache: Optional[Iterator[DataBatch]] = None
+        # Do shuffle or not
+        if shuffle_buffer_length is None:
+            self.shuffle_buffer_length = 2 * self.batch_size
+        else:
+            self.shuffle_buffer_length = shuffle_buffer_length
+        self.shuffle_buffer = None
+        self.shuffle = shuffle
 
         if self.num_workers > 0:
             # generate unique ids for processes
@@ -631,9 +643,24 @@ class ParallelDataLoader(object):
             def same_process_iter():
                 while True:
                     # take the next batch size elements
-                    batch_samples = list(
-                        itertools.islice(generator, self.batch_size)
-                    )
+                    if not self.shuffle:
+                        batch_samples = list(
+                            itertools.islice(generator, self.batch_size)
+                        )
+                    else:
+
+                        if self.shuffle_buffer is None:
+                            self.shuffle_buffer = list(
+                                itertools.islice(generator, self.shuffle_buffer_length)
+                            )
+                        else:
+                            self.shuffle_buffer[-self.batch_size:] = list(
+                                itertools.islice(generator, self.batch_size)
+                            )
+
+                        random.shuffle(self.shuffle_buffer)
+                        batch_samples = self.shuffle_buffer[-self.batch_size:]
+                        self.shuffle_buffer[-self.batch_size:] = [None for i in range(self.batch_size)]
 
                     # terminate if no more batches to be dealt with
                     if len(batch_samples) == 0:

@@ -19,6 +19,7 @@ from ._base import (
     RecipeDataset,
     constant_dataset,
     default_synthetic,
+    shuffle_testing_dataset,
 )
 
 __all__ = [
@@ -27,6 +28,7 @@ __all__ = [
     "ComplexSeasonalTimeSeries",
     "RecipeDataset",
     "constant_dataset",
+    "shuffle_testing_dataset",
     "default_synthetic",
 ]
 
