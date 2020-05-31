@@ -530,7 +530,6 @@ class ParallelDataLoader(object):
         num_prefetch: Optional[int] = None,
         num_workers: Optional[int] = None,
         shuffle_buffer_length: Optional[int] = None,
-        shuffle: Optional[bool] = False
     ):
         # Some windows error with the ForkingPickler prevents usage currently:
         if sys.platform == "win32":
@@ -606,11 +605,12 @@ class ParallelDataLoader(object):
         self.multi_worker_cache: Optional[Iterator[DataBatch]] = None
         # Do shuffle or not
         if shuffle_buffer_length is None:
-            self.shuffle_buffer_length = 2 * self.batch_size
+            self.shuffle = False
+            self.shuffle_buffer_length = None
         else:
+            self.shuffle = True
             self.shuffle_buffer_length = shuffle_buffer_length
         self.shuffle_buffer = None
-        self.shuffle = shuffle
 
         if self.num_workers > 0:
             # generate unique ids for processes
@@ -650,17 +650,20 @@ class ParallelDataLoader(object):
                     else:
 
                         if self.shuffle_buffer is None:
+                            # only executed at the first round, O(shuffle_buffer_length)
                             self.shuffle_buffer = list(
                                 itertools.islice(generator, self.shuffle_buffer_length)
                             )
-                        else:
-                            self.shuffle_buffer[-self.batch_size:] = list(
-                                itertools.islice(generator, self.batch_size)
-                            )
-
-                        random.shuffle(self.shuffle_buffer)
-                        batch_samples = self.shuffle_buffer[-self.batch_size:]
-                        self.shuffle_buffer[-self.batch_size:] = [None for i in range(self.batch_size)]
+                        # O(batch_size)
+                        next_samples = list(
+                            itertools.islice(generator, self.batch_size)
+                        )
+                        batch_samples = []
+                        # O(batch_size) since every operation in the loop is O(1)
+                        for i in range(self.batch_size):
+                            idx = random.randint(0, self.shuffle_buffer_length - 1)
+                            batch_samples.append(self.shuffle_buffer[idx])
+                            self.shuffle_buffer[idx] = next_samples[i]
 
                     # terminate if no more batches to be dealt with
                     if len(batch_samples) == 0:

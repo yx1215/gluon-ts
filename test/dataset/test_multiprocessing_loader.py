@@ -27,7 +27,6 @@ import pandas as pd
 from mxnet.context import current_context
 from flaky import flaky
 import pytest
-import mxnet as mx
 # First-party imports
 from gluonts.dataset.field_names import FieldName
 from gluonts.dataset.loader import (
@@ -47,9 +46,8 @@ from gluonts.dataset.artificial import ConstantDataset
 from gluonts.model.deepar import DeepAREstimator
 from gluonts.evaluation.backtest import backtest_metrics
 from gluonts.trainer import Trainer
-from gluonts.dataset.artificial import constant_dataset, shuffle_testing_dataset
+from gluonts.dataset.artificial import constant_dataset
 from gluonts.evaluation import Evaluator
-from gluonts.distribution.neg_binomial import NegativeBinomialOutput
 # CONSTANTS:
 
 BATCH_SIZE = 8
@@ -482,37 +480,6 @@ def test_general_functionality() -> None:
     assert (
         agg_metrics is not None and item_metrics is not None
     ), "Metrics should not be None if everything went smooth."
-
-
-# This is used to test whether the shuffling function in data loader is working properly.
-def test_shuffling() -> None:
-    n = 100
-    train_ds = shuffle_testing_dataset(n)
-    trainer = Trainer(learning_rate=1e-5, epochs=5, num_batches_per_epoch=5, batch_size=BATCH_SIZE)
-    estimator = DeepAREstimator(
-        prediction_length=20,
-        freq="D",
-        distr_output=NegativeBinomialOutput(),
-        use_feat_static_cat=True,
-        cardinality=[n],
-        trainer=trainer
-    )
-    transform = estimator.create_transformation()
-    loader = TrainDataLoader(
-        train_ds,
-        transform=transform,
-        batch_size=BATCH_SIZE,
-        ctx=mx.cpu(),
-        num_batches_per_epoch=5,
-        shuffle=True,
-        shuffle_buffer_length=3 * BATCH_SIZE,
-    )
-    print(f"dataset size: {len(train_ds)}")
-    start_time = time.time()
-    for batch in loader:
-        print(f"series_number: {batch['feat_static_cat']}")
-    end_time = time.time()
-    print(f"elapsed time: {end_time - start_time}")
 
 
 # delete cache explicitly in last test

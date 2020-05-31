@@ -73,7 +73,6 @@ class DataLoader(Iterable[DataEntry]):
         dtype: DType = np.float32,
         num_workers: Optional[int] = None,
         num_prefetch: Optional[int] = None,
-        shuffle: Optional[bool] = False,
         shuffle_buffer_length: Optional[int] = None,
         **kwargs,
     ) -> None:
@@ -91,7 +90,6 @@ class DataLoader(Iterable[DataEntry]):
             )
         self.num_workers = num_workers
         self.num_prefetch = num_prefetch
-        self.shuffle = shuffle
         self.shuffle_buffer_length = shuffle_buffer_length
 
         self.parallel_data_loader = ParallelDataLoader(
@@ -104,7 +102,6 @@ class DataLoader(Iterable[DataEntry]):
             dtype=self.dtype,
             num_workers=self.num_workers,
             num_prefetch=self.num_prefetch,
-            shuffle=self.shuffle,
             shuffle_buffer_length=self.shuffle_buffer_length,
             **kwargs,
         )
@@ -157,7 +154,6 @@ class TrainDataLoader(DataLoader):
         num_batches_per_epoch: int,
         num_workers: Optional[int] = None,
         num_prefetch: Optional[int] = None,
-        shuffle: Optional[bool] = False,
         shuffle_buffer_length: Optional[int] = None,
         dtype: DType = np.float32,
         **kwargs,
@@ -174,7 +170,6 @@ class TrainDataLoader(DataLoader):
             cyclic=True,
             num_workers=num_workers,
             num_prefetch=num_prefetch,
-            shuffle=shuffle,
             shuffle_buffer_length=shuffle_buffer_length,
             **kwargs,
         )
@@ -206,7 +201,6 @@ class ValidationDataLoader(DataLoader):
         ctx: mx.Context,
         num_workers: Optional[int] = None,
         num_prefetch: Optional[int] = None,
-        shuffle: Optional[bool] = False,
         shuffle_buffer_length: Optional[int] = None,
         dtype: DType = np.float32,
         **kwargs,
@@ -221,7 +215,6 @@ class ValidationDataLoader(DataLoader):
             cyclic=False,
             num_workers=num_workers,
             num_prefetch=num_prefetch,
-            shuffle=shuffle,
             shuffle_buffer_length=shuffle_buffer_length,
             **kwargs,
         )
@@ -237,8 +230,6 @@ class InferenceDataLoader(DataLoader):
         ctx: mx.Context,
         num_workers: Optional[int] = None,
         num_prefetch: Optional[int] = None,
-        shuffle: Optional[bool] = False,
-        shuffle_buffer_length: Optional[int] = None,
         dtype: DType = np.float32,
         **kwargs,
     ) -> None:
@@ -252,7 +243,6 @@ class InferenceDataLoader(DataLoader):
             cyclic=False,
             num_workers=num_workers,
             num_prefetch=num_prefetch,
-            shuffle=shuffle,
-            shuffle_buffer_length=shuffle_buffer_length,
+            shuffle_buffer_length=None,
             **kwargs,
         )

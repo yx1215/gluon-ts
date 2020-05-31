@@ -865,7 +865,7 @@ def shuffle_testing_dataset(n):
         {
             FieldName.TARGET: a,
             FieldName.START: start,
-            FieldName.FEAT_STATIC_CAT: b
+            FieldName.ITEM_ID: b
         }
         for a, b in zip(targets, number)
 
