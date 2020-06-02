@@ -26,7 +26,8 @@ for c in range_list:
         batch_size=BATCH_SIZE,
         ctx=mx.cpu(),
         num_batches_per_epoch=NUM_BATCH_PER_EPOCH,
-        # shuffle_buffer_length=c * BATCH_SIZE,
+        shuffle_buffer_length=c * BATCH_SIZE,
+        num_workers=2,
     )
     hit_list = [[0 for i in range(NUM_BATCH_PER_EPOCH)] for j in range(n)]
     print(f"dataset size: {len(train_ds)}")

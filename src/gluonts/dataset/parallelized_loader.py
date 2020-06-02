@@ -308,6 +308,9 @@ def _worker_fn(
     is_train: bool,
     cyclic: bool,
     cycle_num: int,
+    shuffle: bool,
+    shuffle_buffer: multiprocessing.Manager().list,
+    shuffle_buffer_length: int,
 ):
     """Function for processing data in worker process."""
 
@@ -318,9 +321,26 @@ def _worker_fn(
         _worker_reset_iterator(is_train, cyclic, cycle_num)
 
     # retrieve the samples that will be batched
-    batch_samples = list(
-        itertools.islice(_WorkerData.dataset_iterator, batch_size)
-    )
+    if not shuffle:
+        batch_samples = list(
+            itertools.islice(_WorkerData.dataset_iterator, batch_size)
+        )
+    else:
+        if len(shuffle_buffer) == 0:
+            for sample in list(
+                itertools.islice(_WorkerData.dataset_iterator, shuffle_buffer_length)
+            ):
+                shuffle_buffer.append(sample)
+
+        next_samples = list(
+            itertools.islice(_WorkerData.dataset_iterator, batch_size)
+        )
+        batch_samples = []
+        # O(batch_size) since every operation in the loop is O(1)
+        for i in range(batch_size):
+            idx = random.randint(0, shuffle_buffer_length - 1)
+            batch_samples.append(shuffle_buffer[idx])
+            shuffle_buffer[idx] = next_samples[i]
 
     # batch the samples, if there were any
     if batch_samples:
@@ -364,6 +384,8 @@ class _MultiWorkerIter(object):
         worker_fn: Callable,
         dataset_len: int,
         timeout: int,
+        shuffle: bool,
+        shuffle_buffer_length: int,
     ):
         self._worker_pool = worker_pool
         self._batchify_fn = batchify_fn
@@ -385,7 +407,11 @@ class _MultiWorkerIter(object):
         self._num_workers = num_workers
         self._batch_size = batch_size
         self._dataset_len = dataset_len
-
+        # shuffle variable
+        self.manager = multiprocessing.Manager()
+        self.shuffle = shuffle
+        self.shuffle_buffer = self.manager.list()
+        self.shuffle_buffer_length = shuffle_buffer_length
         # pre-fetch batches
         self._num_prefetch = num_prefetch
         for i in range(self._num_prefetch):
@@ -407,6 +433,9 @@ class _MultiWorkerIter(object):
                 self._is_train,
                 self._cyclic,
                 self._cycle_num,
+                self.shuffle,
+                self.shuffle_buffer,
+                self.shuffle_buffer_length,
             ),
         )
         self._data_buffer[self._sent_idx] = async_ret
@@ -604,12 +633,8 @@ class ParallelDataLoader(object):
         # In order to recycle unused but pre-calculated batches from last epoch for training:
         self.multi_worker_cache: Optional[Iterator[DataBatch]] = None
         # Do shuffle or not
-        if shuffle_buffer_length is None:
-            self.shuffle = False
-            self.shuffle_buffer_length = None
-        else:
-            self.shuffle = True
-            self.shuffle_buffer_length = shuffle_buffer_length
+        self.shuffle = False if shuffle_buffer_length is None else True
+        self.shuffle_buffer_length = shuffle_buffer_length
         self.shuffle_buffer = None
 
         if self.num_workers > 0:
@@ -700,6 +725,8 @@ class ParallelDataLoader(object):
                     dataset_len=self.dataset_len,
                     cycle_num=self.cycle_num,
                     timeout=120,
+                    shuffle=self.shuffle,
+                    shuffle_buffer_length=self.shuffle_buffer_length
                 )
                 if self.cyclic:
                     self.multi_worker_cache = iter(multi_worker)
