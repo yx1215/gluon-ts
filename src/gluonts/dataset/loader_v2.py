@@ -43,14 +43,10 @@ def batchify(
 class CyclicIterable(Iterable):
     def __init__(self, base_iterable: Iterable) -> None:
         self.base_iterable = base_iterable
-        self.iterator = iter(base_iterable)
 
     def __iter__(self):
         while True:
-            try:
-                yield next(self.iterator)
-            except StopIteration:
-                self.iterator = iter(self.base_iterable)
+            yield from self.base_iterable
 
 
 class PseudoShuffledIterable(Iterable):

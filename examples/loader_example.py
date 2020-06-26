@@ -34,7 +34,7 @@ transform = estimator.create_transformation()
 
 transformed_dataset = TransformedDataset(
     base_dataset=PseudoShuffledIterable(
-        CyclicIterable(dataset_train), buffer_length=100
+        iter(CyclicIterable(dataset_train)), buffer_length=100
     ),
     transformation=transform,
     is_train=True,
