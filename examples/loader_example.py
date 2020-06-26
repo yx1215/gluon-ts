@@ -13,7 +13,7 @@ from gluonts.transform import TransformedDataset
 from gluonts.dataset.loader_v2 import (
     DataLoader,
     CyclicIterable,
-    ShuffledIterable,
+    PseudoShuffledIterable,
 )
 from gluonts.model.deepar import DeepAREstimator
 
@@ -33,7 +33,7 @@ transform = estimator.create_transformation()
 ## What happens during training?
 
 transformed_dataset = TransformedDataset(
-    base_dataset=ShuffledIterable(
+    base_dataset=PseudoShuffledIterable(
         CyclicIterable(dataset_train), buffer_length=100
     ),
     transformation=transform,

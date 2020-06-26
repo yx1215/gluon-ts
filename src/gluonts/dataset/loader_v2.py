@@ -53,7 +53,7 @@ class CyclicIterable(Iterable):
                 self.iterator = iter(self.base_iterable)
 
 
-class ShuffledIterable(Iterable):
+class PseudoShuffledIterable(Iterable):
     def __init__(self, base_iterable: Iterable, buffer_length: int):
         self.base_iterable = base_iterable
         self.buffer_length = buffer_length
