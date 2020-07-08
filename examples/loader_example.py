@@ -10,12 +10,7 @@ import torch
 
 from gluonts.dataset.repository.datasets import get_dataset
 from gluonts.transform import TransformedDataset
-from gluonts.dataset.loader_v2 import (
-    DataLoader,
-    CyclicIterable,
-    PseudoShuffledIterable,
-    MultiProcessIterator,
-)
+from gluonts.dataset.loader import TrainDataLoader, InferenceDataLoader
 from gluonts.model.deepar import DeepAREstimator
 
 dataset = get_dataset("electricity")
@@ -25,7 +20,7 @@ prediction_length = dataset.metadata.prediction_length
 
 batch_size = 32
 num_batches_per_epoch = 8
-num_epochs = 5
+num_epochs = 10
 
 estimator = DeepAREstimator(freq=freq, prediction_length=prediction_length,)
 
@@ -33,26 +28,14 @@ transform = estimator.create_transformation()
 
 ## What happens during training?
 
-transformed_dataset = TransformedDataset(
-    base_dataset=CyclicIterable(dataset_train),
-    transformation=transform,
-    is_train=True,
-)
-
-training_loader = DataLoader(
-    PseudoShuffledIterable(
-        # The following line gives single process data loading
-        # base_iterable=iter(transformed_dataset),
-        # The following lines give multi process data loading
-        base_iterable=MultiProcessIterator(
-            transformed_dataset,
-            num_workers=2,
-            num_entries=num_epochs * num_batches_per_epoch * batch_size,
-        ),
-        buffer_length=20,
-    ),
+training_loader = TrainDataLoader(
+    dataset=dataset_train,
+    transform=transform,
     batch_size=batch_size,
-    make_array_fn=lambda a: torch.tensor(a, device=torch.device("cpu")),
+    ctx=mx.cpu(),
+    num_batches_per_epoch=num_batches_per_epoch,
+    num_workers=2,
+    shuffle_buffer_length=64,
 )
 
 exp_total_batches = num_batches_per_epoch * num_epochs
@@ -60,8 +43,8 @@ exp_total_batches = num_batches_per_epoch * num_epochs
 start = time.time()
 batch_ids = []
 for epoch_no in range(num_epochs):
-    for batch in itertools.islice(training_loader, num_batches_per_epoch):
-        assert isinstance(batch["past_target"], torch.Tensor)
+    for batch in training_loader:
+        assert isinstance(batch["past_target"], mx.nd.NDArray)
         assert (
             batch["past_target"].shape[0] == batch_size
         ), f"{batch['past_target'].shape[0]} vs {batch_size}"
@@ -86,19 +69,13 @@ sns.heatmap(count_per_batch)
 plt.title("Training batches")
 plt.show()
 
-# The following is needed to trigger subprocesses termination
-del training_loader
-
 ## What happens during inference?
 
-transformed_dataset = TransformedDataset(
-    base_dataset=dataset_train, transformation=transform, is_train=False,
-)
-
-inference_loader = DataLoader(
-    transformed_dataset,
+inference_loader = InferenceDataLoader(
+    dataset=dataset_train,
+    transform=transform,
     batch_size=batch_size,
-    make_array_fn=lambda a: mx.nd.array(a, ctx=mx.cpu(1)),
+    ctx=mx.cpu(),
 )
 
 start = time.time()

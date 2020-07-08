@@ -57,16 +57,21 @@ class PseudoShuffledIterable(Iterable):
         self.buffer_length = buffer_length
         self.shuffle_buffer: list = []
 
-    def sample_from_buffer(self):
+    def sample_from_buffer(self, to_replace=None):
         idx = random.randint(0, len(self.shuffle_buffer) - 1)
-        return self.shuffle_buffer.pop(idx)
+        if to_replace is not None:
+            element = self.shuffle_buffer[idx]
+            self.shuffle_buffer[idx] = to_replace
+            return element
+        else:
+            return self.shuffle_buffer.pop(idx)
 
     def __iter__(self):
         for x in self.base_iterable:
             if len(self.shuffle_buffer) < self.buffer_length:
                 self.shuffle_buffer.append(x)
             if len(self.shuffle_buffer) == self.buffer_length:
-                yield self.sample_from_buffer()
+                yield self.sample_from_buffer(to_replace=x)
         while len(self.shuffle_buffer):
             yield self.sample_from_buffer()
 

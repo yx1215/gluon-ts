@@ -1,15 +1,11 @@
 import time
 
 import torch
+import mxnet as mx
 
 from gluonts.dataset.repository.datasets import get_dataset
 from gluonts.transform import TransformedDataset
-from gluonts.dataset.loader_v2 import (
-    DataLoader,
-    CyclicIterable,
-    PseudoShuffledIterable,
-    MultiProcessIterator,
-)
+from gluonts.dataset.loader import TrainDataLoader
 from gluonts.model.deepar import DeepAREstimator
 
 dataset = get_dataset("electricity")
@@ -19,34 +15,25 @@ prediction_length = dataset.metadata.prediction_length
 
 batch_size = 32
 num_batches_per_epoch = 8
-num_epochs = 5
 
 estimator = DeepAREstimator(freq=freq, prediction_length=prediction_length,)
 
 transform = estimator.create_transformation()
 
-## What happens during training?
+print("creating data loader")
 
-transformed_dataset = TransformedDataset(
-    base_dataset=CyclicIterable(dataset_train),
-    transformation=transform,
-    is_train=True,
-)
-
-training_loader = DataLoader(
-    PseudoShuffledIterable(
-        # The following line gives single process data loading
-        # base_iterable=iter(transformed_dataset),
-        # The following lines give multi process data loading
-        base_iterable=MultiProcessIterator(
-            transformed_dataset, num_workers=2, num_entries=100
-        ),
-        buffer_length=20,
-    ),
+training_loader = TrainDataLoader(
+    dataset=dataset_train,
+    transform=transform,
     batch_size=batch_size,
-    make_array_fn=lambda a: torch.tensor(a, device=torch.device("cpu")),
+    ctx=mx.cpu(),
+    num_batches_per_epoch=num_batches_per_epoch,
+    num_workers=2,
+    shuffle_buffer_length=20,
 )
+
+print("sleeping")
 
 time.sleep(1.0)
 
-del training_loader
+print("done")
