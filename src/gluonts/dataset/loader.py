@@ -283,7 +283,6 @@ class ValidationDataLoader(DataLoader):
         transform: Transformation,
         batch_size: int,
         ctx: mx.Context,
-        num_prefetch: Optional[int] = None,
     ) -> None:
         transformed_dataset = TransformedDataset(
             base_dataset=dataset, transformation=transform, is_train=True,
